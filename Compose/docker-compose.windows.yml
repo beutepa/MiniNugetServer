@@ -1,0 +1,26 @@
+version: '2'
+     
+services:
+  web:
+    image: asarafian/mininugetserver
+    environment:
+      apikey: "mininugetserver"
+      packagesPath: "C:/Packages"
+    volumes:
+      - C:/docker/core_mininugetserver/Packages/:C:/Packages
+    expose:
+      - "80"
+
+  nginx:
+    image: nlb-nginx:1.0.0
+    depends_on:
+      - "web"
+    links:
+      - "web"
+    ports:
+      - "80:80"
+
+networks:
+  default:
+    external:
+      name: nat

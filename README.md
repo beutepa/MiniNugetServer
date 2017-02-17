@@ -45,23 +45,36 @@ If you want to run manually then standard `docker run` can be used with option d
 
 ## Scale the container
 
-To scale the containers you can use define docker compose configuration file referencing the [asarafian/mininugetserver](https://hub.docker.com/r/asarafian/mininugetserver/). 
+To scale the containers you can use a docker compose configuration file referencing the [asarafian/mininugetserver](https://hub.docker.com/r/asarafian/mininugetserver/). 
 To make sure they all behave the same and reference the same packages folder, define the **apikey** and/or **packagesFolder** environment variables.
 The **packagesFolder** folder must specify to a common folder on the host that needs to be mounted to each container.
+
 
 This is an example docker-compose file
 
 ```text
-version: '2.1'
-
+version: '2'
+     
 services:
-  mininugetserver:
+  web:
     image: asarafian/mininugetserver
     environment:
       apikey: "mininugetserver"
-      packagesPath: "C:\Packages"
+      packagesPath: "C:/Packages"
     volumes:
-      - C:\MiniNuGetServer\Packages/:C:\Packages
+      - C:/docker/core_mininugetserver/Packages/:C:/Packages
+    expose:
+      - "80"
+
+  nginx:
+    build: ./nginx
+    image: nlb-nginx:1.0.0
+    depends_on:
+      - "web"
+    links:
+      - "web"
+    ports:
+      - "80:80"
 
 networks:
   default:
@@ -69,7 +82,62 @@ networks:
       name: nat
 ```
 
-To launch scale with e.g. 2 `mininugetserver` instances execute `docker-compose scale mininugetserver=2`.
+Load-balancing is handled by the nginx container, the Dockerfile to build the nginx container:
+
+```text
+FROM microsoft/windowsservercore
+RUN "powershell set-itemproperty -path 'HKLM:\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters' -Name ServerPriorityTimeLimit -Value 0 -Type DWord"
+RUN ["powershell","wget","http://nginx.org/download/nginx-1.10.2.zip","-UseBasicParsing","-OutFile","c:\\nginx.zip"]
+RUN ["powershell","Expand-Archive","c:\\nginx.zip","-Dest","c:\\nginx"]
+COPY nginx.conf c:/nginx/nginx-1.10.2/conf
+WORKDIR c:\\nginx\\nginx-1.10.2
+ENTRYPOINT ["powershell",".\\nginx.exe"]
+```
+
+The nginx configuration used:
+```text
+#user  nobody;
+worker_processes  1;
+
+#error_log  C:/ProgramData/nginx/logs/error.log;
+error_log   c:/nginx/nginx-1.10.2/logs/error.log  notice;
+#error_log  C:/ProgramData/nginx/logs/error.log  info;
+
+#pid        C:/ProgramData/nginx/logs/nginx.pid;
+
+
+events {
+    worker_connections  1024;
+}
+
+
+http {
+    upstream nlb-nginx {
+        server web;  # the service name of the container from the docker-compose file
+    }
+
+    server {
+        listen 80;
+
+        location / {
+			proxy_set_header Host $host;
+            proxy_pass http://nlb-nginx;
+        }
+    }
+}
+```
+
+All the files can be found in the `.\Compose` subfolder, from there you can:
+build: `docker-compose -f .\docker-compose.windows.yml build`
+start: `docker-compose -f .\docker-compose.windows.yml start`
+scale: `docker-compose -f .\docker-compose.windows.yml scale web=2`
+
+To validate the load balancing, the Default.aspx can be updated to contain the local ip address of the container.
+```text
+...
+<title>NuGet Private Repository - <%= Request["LOCAL_ADDR"] %></title>
+...
+```
 
 # Debug 
 
