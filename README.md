@@ -129,6 +129,7 @@ http {
 
 All the files can be found in the `.\Compose` subfolder, from there you can:
 build: `docker-compose -f .\docker-compose.windows.yml build`
+creaet: `docker-compose -f .\docker-compose.windows.yml create`
 start: `docker-compose -f .\docker-compose.windows.yml start`
 scale: `docker-compose -f .\docker-compose.windows.yml scale web=2`
 
