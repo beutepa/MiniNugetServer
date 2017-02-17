@@ -129,9 +129,9 @@ http {
 
 All the files can be found in the `.\Compose` subfolder, from there you can:
 build: `docker-compose -f .\docker-compose.windows.yml build`
-creaet: `docker-compose -f .\docker-compose.windows.yml create`
+create: `docker-compose -f .\docker-compose.windows.yml create`
 start: `docker-compose -f .\docker-compose.windows.yml start`
-scale: `docker-compose -f .\docker-compose.windows.yml scale web=2`
+scale: `docker-compose -f .\docker-compose.windows.yml scale web=2` (no automatic nginx config updates yet, so restart is needed: `docker-compose -f .\docker-compose.windows.yml restart`)
 
 To validate the load balancing, the Default.aspx can be updated to contain the local ip address of the container.
 ```text
